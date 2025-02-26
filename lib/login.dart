@@ -1,9 +1,8 @@
+// login.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
 import 'api.dart';
 import 'movie_listscreen.dart';
-import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,7 +12,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final ApiService _apiService = ApiService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   bool _isLoading = false;
@@ -34,14 +32,14 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordError = "Password is required";
       } else if (value.length < 8) {
         _passwordError = "Minimum 8 characters required";
-      // } else if (!RegExp(r'[A-Z]').hasMatch(value)) {
-      //   _passwordError = "Must contain 1 uppercase letter";
-      // } else if (!RegExp(r'[a-z]').hasMatch(value)) {
-      //   _passwordError = "Must contain 1 lowercase letter";
-      // } else if (!RegExp(r'\d').hasMatch(value)) {
-      //   _passwordError = "Must contain 1 digit";
-      // } else if (!RegExp(r'[@\$!%*?&]').hasMatch(value)) {
-      //   _passwordError = "Must contain 1 special character";
+      } else if (!RegExp(r'[A-Z]').hasMatch(value)) {
+        _passwordError = "Must contain 1 uppercase letter";
+      } else if (!RegExp(r'[a-z]').hasMatch(value)) {
+        _passwordError = "Must contain 1 lowercase letter";
+      } else if (!RegExp(r'\d').hasMatch(value)) {
+        _passwordError = "Must contain 1 digit";
+      } else if (!RegExp(r'[@\\$!%*?&]').hasMatch(value)) {
+        _passwordError = "Must contain 1 special character";
       } else {
         _passwordError = null;
       }
@@ -49,57 +47,35 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-  String username = _usernameController.text.trim();
-  String password = _passwordController.text;
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text;
 
-  _validateUsername(username);
-  _validatePassword(password);
+    _validateUsername(username);
+    _validatePassword(password);
 
-  if (_usernameError != null || _passwordError != null) return;
+    if (_usernameError != null || _passwordError != null) return;
 
-  setState(() => _isLoading = true);
+    setState(() => _isLoading = true);
 
-  try {
-    final response = await http.post(
-      Uri.parse("https://192.168.1.95:7173/api/Auth/login"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"username": username, "password": password}),
-    );
-    
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      String? token = data["token"]; // Extract token from API response
-      print("Login Token: $token");
-      if (token != null) {
-        // Store token in Secure Storage
-        await _secureStorage.write(key: 'auth_token', value: token);
-
-        // Navigate to Movie List Screen
+    try {
+      bool success = await ApiService.loginUser(username, password);
+      if (success) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MovieListScreen()),
         );
       } else {
-        throw Exception("Invalid response: Token missing");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Login failed"), backgroundColor: Colors.red),
+        );
       }
-    } else {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Login failed: ${response.body}"),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Error: ${e.toString()}"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
 
-  setState(() => _isLoading = false);
-}
+    setState(() => _isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,10 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
-                      ),
+                      const Text("Login", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black)),
                       const SizedBox(height: 20),
                       TextFormField(
                         controller: _usernameController,

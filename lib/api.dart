@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'movie.dart';
 
 class ApiService {
-  static const String baseUrl = "https://192.168.1.95:7173/api/Movies";
+  static const String baseUrl = "https://192.168.1.95:7173/api";
   static final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   // Get the stored auth token
@@ -63,7 +63,7 @@ class ApiService {
       if (token == null) throw Exception("No Auth Token Found! Please login again.");
 
       final response = await http.get(
-        Uri.parse("$baseUrl/movies"),
+        Uri.parse("$baseUrl/Movies"),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -85,7 +85,7 @@ class ApiService {
       if (token == null) throw Exception("Unauthorized: Please login again.");
 
       final response = await http.post(
-        Uri.parse("$baseUrl/movies"),
+        Uri.parse("$baseUrl/Movies"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -97,7 +97,7 @@ class ApiService {
         }),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 ) {
         return true;
       } else {
         throw Exception("Failed to add movie: ${response.body}");
@@ -107,60 +107,53 @@ class ApiService {
     }
   }
 
-  // Update a Movie (PUT)
-  static Future<bool> updateMovie(int id, String title, String genre, String releaseDate) async {
-    try {
-      final token = await getToken();
-      if (token == null) throw Exception("Unauthorized: Please login again.");
+  
+  // PATCH - Update a Movie
+  Future<void> updateMovie(Movie movie) async {
+  try {
+    String? token = await _secureStorage.read(key: 'auth_token');
 
-      final response = await http.put(
-        Uri.parse("$baseUrl/movies/$id"),
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: jsonEncode({
-          "title": title,
-          "genre": genre,
-          "releaseDate": releaseDate,
-        }),
-      );
+    final response = await http.put(
+      Uri.parse('$baseUrl/${movie.id}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "title": movie.title,
+        "genre": movie.genre,
+        "releaseDate": movie.releaseDate,
+      }),
+    );
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        throw Exception("Failed to update movie: ${response.body}");
-      }
-    } catch (e) {
-      throw Exception("Error updating movie: $e");
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      print("Movie updated successfully!");
+      return; // Don't throw an error, just return success
+    } else {
+      throw Exception("Failed to update movie. Server responded with ${response.statusCode}");
     }
+  } catch (e) {
+    throw Exception("Failed to update movie: $e");
   }
+}
 
-  // Delete a Movie (DELETE)
-  static Future<bool> deleteMovie(int id) async {
-    try {
-      final token = await getToken();
-      if (token == null) throw Exception("Unauthorized: Please login again.");
 
-      final response = await http.delete(
-        Uri.parse("$baseUrl/movies/$id"),
-        headers: {
-          "Authorization": "Bearer $token",
-        },
-      );
+  // DELETE - Delete a Movie
+  Future<bool> deleteMovie(int id) async {
+    final token = await getToken();
+    if (token == null) throw Exception("Unauthorized: Please login again.");
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        throw Exception("Failed to delete movie: ${response.body}");
-      }
-    } catch (e) {
-      throw Exception("Error deleting movie: $e");
+    final response = await http.delete(
+      Uri.parse("$baseUrl/Movies/$id"), // Ensure correct URL     
+      headers: {
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      return true;
+    } else {
+      throw Exception("Failed to delete movie: ${response.body}");
     }
-  }
-
-  // Logout Function
-  static Future<void> logout() async {
-    await _secureStorage.delete(key: 'auth_token');
   }
 }

@@ -1,8 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api.dart';  // Import API service
 import 'login.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -13,12 +11,9 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _isPasswordVisible = false;
   String? _usernameError;
   String? _passwordError;
-
-  final String _registerUrl = "https://192.168.1.95:7173/api/Auth/register";
 
   Future<void> _register() async {
     String username = _usernameController.text.trim();
@@ -35,44 +30,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_usernameError != null || _passwordError != null) return;
 
     try {
-      // Send Registration Request to API
-      final response = await http.post(
-        Uri.parse(_registerUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
+      bool isRegistered = await ApiService.registerUser(username, password);
+      if (isRegistered) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', username);
 
-      print("Register Response: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Registration Successful"), backgroundColor: Colors.green),
+        );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        // Parse Response
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-        if (responseData.containsKey('token')) {
-          String authToken = responseData['token'];
-          
-
-          // Save Username in SharedPreferences
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('username', username);
-
-          // Save Auth Token Securely
-          await _secureStorage.write(key: 'auth_token', value: authToken);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Registration Successful"), backgroundColor: Colors.green),
-          );
-
-          // Navigate to Login Screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        } else {
-          throw Exception("Registration failed: Token not received");
-        }
+        // Navigate to Login Screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
       } else {
-        throw Exception("Registration failed: ${response.body}");
+        throw Exception("Registration failed. Try again.");
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
