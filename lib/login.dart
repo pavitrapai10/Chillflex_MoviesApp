@@ -1,4 +1,5 @@
 // login.dart
+import 'package:api/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api.dart';
@@ -142,6 +143,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Text("Login", style: TextStyle(fontSize: 18)),
                         ),
                       ),
+                      TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => RegisterScreen()),
+                        );
+                      },
+                      child: const Text("Go back to Register"),
+                    ),
                     ],
                   ),
                 ),

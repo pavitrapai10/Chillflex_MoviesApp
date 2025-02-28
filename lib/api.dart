@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'movie.dart';
 
 class ApiService {
-  static const String baseUrl = "https://192.168.1.95:7173/api";
+  static const String baseUrl = "https://192.168.1.142:7173/api";
   static final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   // Get the stored auth token
@@ -108,27 +108,46 @@ class ApiService {
   }
 
   
-  // PATCH - Update a Movie
   Future<void> updateMovie(Movie movie) async {
   try {
-    String? token = await _secureStorage.read(key: 'auth_token');
+    String? token = await getToken(); 
+
+    if (movie.id == null || movie.id == 0) {
+      throw Exception("Invalid movie ID: ${movie.id}");
+    }
+
+    final Uri url = Uri.parse('https://192.168.1.142:7173/api/Movies/${movie.id}'); 
+
+    print("API Request - Updating Movie ID: ${movie.id}");
+    print("API Request - URL: $url");
+    print("API Request - Body: ${jsonEncode({
+      "id": movie.id,
+      "title": movie.title,
+      "genre": movie.genre,
+      "releaseDate": movie.releaseDate,
+    })}");
 
     final response = await http.put(
-      Uri.parse('$baseUrl/${movie.id}'),
+      url,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
+        "id": movie.id,  // Include ID since PUT replaces the full entity
         "title": movie.title,
         "genre": movie.genre,
         "releaseDate": movie.releaseDate,
       }),
     );
 
+    print("API Response - Status Code: ${response.statusCode}");
+    print("API Response - Body: ${response.body}");
+
     if (response.statusCode == 200 || response.statusCode == 204) {
       print("Movie updated successfully!");
-      return; // Don't throw an error, just return success
+    } else if (response.statusCode == 404) {
+      throw Exception("Failed to update movie: Movie not found (404). Check if ID ${movie.id} exists.");
     } else {
       throw Exception("Failed to update movie. Server responded with ${response.statusCode}");
     }
@@ -144,7 +163,7 @@ class ApiService {
     if (token == null) throw Exception("Unauthorized: Please login again.");
 
     final response = await http.delete(
-      Uri.parse("$baseUrl/Movies/$id"), // Ensure correct URL     
+      Uri.parse("$baseUrl/Movies/$id"),     
       headers: {
         "Authorization": "Bearer $token",
       },

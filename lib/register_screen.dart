@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'api.dart';  // Import API service
+import 'api.dart';  
 import 'login.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -15,26 +15,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _usernameError;
   String? _passwordError;
 
-  Future<void> _register() async {
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text;
+Future<void> _register() async {
+  String username = _usernameController.text.trim();
+  String password = _passwordController.text;
 
-    // Validate username and password
-    setState(() {
-      _usernameError = username.isEmpty ? "Username is required" : null;
-      _passwordError = password.length < 8
-          ? "Password must be at least 8 characters"
-          : null;
-    });
+  // Validate username and password
+  setState(() {
+    _usernameError = username.isEmpty ? "Username is required" : null;
+    _passwordError = password.length < 8 ? "Password must be at least 8 characters" : null;
+  });
 
-    if (_usernameError != null || _passwordError != null) return;
+  if (_usernameError != null || _passwordError != null) return;
 
-    try {
-      bool isRegistered = await ApiService.registerUser(username, password);
-      if (isRegistered) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('username', username);
+  try {
+    bool isRegistered = await ApiService.registerUser(username, password);
 
+    if (isRegistered) {
+      // Store username in SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', username);
+
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Registration Successful"), backgroundColor: Colors.green),
         );
@@ -44,20 +45,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
           context,
           MaterialPageRoute(builder: (context) => LoginScreen()),
         );
-      } else {
-        throw Exception("Registration failed. Try again.");
       }
-    } catch (e) {
+    }
+  } catch (e) {
+    String errorMessage = e.toString();
+
+    if (errorMessage.contains("Username already exists")) {
+      setState(() {
+        _usernameError = "Username already exists";
+      });
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
       );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 223, 0, 0),
+      backgroundColor: const Color.fromARGB(255, 194, 0, 0),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(

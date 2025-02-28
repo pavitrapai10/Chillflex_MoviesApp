@@ -14,6 +14,7 @@ class MovieListScreen extends StatefulWidget {
 
 class _MovieListScreenState extends State<MovieListScreen> {
   final ApiService _apiService = ApiService();
+  final _formKey = GlobalKey<FormState>();
   late Future<List<Movie>> _movies;
 
   @override
@@ -67,55 +68,96 @@ class _MovieListScreenState extends State<MovieListScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text("Edit Movie"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: titleController, decoration: const InputDecoration(labelText: "Title")),
-              TextField(controller: genreController, decoration: const InputDecoration(labelText: "Genre")),
-              TextField(
-                controller: releaseDateController,
-                decoration: const InputDecoration(
-                  labelText: "Release Date (YYYY-MM-DD)",
-                  suffixIcon: Icon(Icons.calendar_today), // Calendar icon added
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: "Title"),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Title is required";
+                    }
+                    return null;
+                  },
                 ),
-                readOnly: true,
-                onTap: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.tryParse(movie.releaseDate) ?? DateTime.now(),
-                    firstDate: DateTime(1900),
-                    lastDate: DateTime(2100),
-                  );
-                  if (pickedDate != null) {
-                    releaseDateController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
-                  }
-                },
-              ),
-            ],
+                TextFormField(
+                  controller: genreController,
+                  decoration: const InputDecoration(labelText: "Genre"),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Genre is required";
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: releaseDateController,
+                  decoration: const InputDecoration(
+                    labelText: "Release Date (YYYY-MM-DD)",
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  readOnly: true,
+                  onTap: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.tryParse(movie.releaseDate) ?? DateTime.now(),
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime(2100),
+                    );
+                    if (pickedDate != null) {
+                      releaseDateController.text = DateFormat('yyyy-MM-dd').format(pickedDate);
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Release date is required";
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
-             
-             onPressed: () async {
-  Movie updatedMovie = Movie(
-    id: movie.id,
-    title: titleController.text,
-    genre: genreController.text,
-    releaseDate: releaseDateController.text,
-  );
-  
-  try {
-    await _apiService.updateMovie(updatedMovie);
-    Navigator.pop(context);
-    _loadMovies();  // Refresh the movie list
-    _showSuccessPopup("Movie updated successfully!");
-  } catch (e) {
-    Navigator.pop(context);
-    _showSuccessPopup("Error updating movie: $e");
-  }
-},
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  Movie updatedMovie = Movie(
+                    id: movie.id,
+                    title: titleController.text.trim(),
+                    genre: genreController.text.trim(),
+                    releaseDate: releaseDateController.text.trim(),
+                  );
 
+                  try {
+                    print("API Request - Updating Movie ID: ${updatedMovie.id}");
+                    print("API Request - Body: ${{
+                      "title": updatedMovie.title,
+                      "genre": updatedMovie.genre,
+                      "releaseDate": updatedMovie.releaseDate,
+                    }}");
+
+                    await _apiService.updateMovie(updatedMovie);
+
+                    print("Movie updated successfully!");
+
+                    Navigator.pop(context);
+                    _loadMovies();
+                    _showSuccessPopup("Movie updated successfully!");
+                  } catch (e) {
+                    print("Error updating movie: $e");
+                    Navigator.pop(context);
+                    _showSuccessPopup("Error updating movie: $e");
+                  }
+                }
+              },
               child: const Text("Save"),
             ),
           ],
@@ -132,7 +174,10 @@ class _MovieListScreenState extends State<MovieListScreen> {
           title: const Text("Confirm Deletion"),
           content: const Text("Are you sure you want to delete this movie?"),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
               onPressed: () async {
                 try {
@@ -152,26 +197,24 @@ class _MovieListScreenState extends State<MovieListScreen> {
       },
     );
   }
-final FlutterSecureStorage secureStorage = FlutterSecureStorage();
- Future<void> _logout() async {
-  try {
-    // Clear username from SharedPreferences
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
 
-    // Clear auth token from Secure Storage
-    await secureStorage.delete(key: 'auth_token');
+  final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
-    // Navigate to login screen and remove all previous screens from the stack
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
-      (route) => false, // This removes all previous routes
-    );
-  } catch (e) {
-    print("Error during logout: $e");
+  Future<void> _logout() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      await secureStorage.delete(key: 'auth_token');
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      print("Error during logout: $e");
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -236,15 +279,6 @@ final FlutterSecureStorage secureStorage = FlutterSecureStorage();
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => AddMovieScreen())).then((_) {
-            _loadMovies();
-          });
-        },
-        backgroundColor: const Color.fromARGB(255, 202, 24, 0),
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

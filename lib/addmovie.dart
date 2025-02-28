@@ -40,31 +40,48 @@ class _AddMovieScreenState extends State<AddMovieScreen> {
   }
 
   void _addMovie() async {
-    if (_formKey.currentState!.validate()) {
-      bool success = await _apiService.addMovie(
-        _titleController.text.trim(),
-        _genreController.text.trim(),
-        _releaseDateController.text.trim(),
-      );
+  if (_formKey.currentState!.validate()) {
+    bool success = await _apiService.addMovie(
+      _titleController.text.trim(),
+      _genreController.text.trim(),
+      _releaseDateController.text.trim(),
+    );
 
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Movie added successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true); // Returning true for refresh
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add movie.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (success) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Success"),
+          content: Text("Movie added successfully!"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context, true); // Close add movie screen & refresh
+              },
+              child: Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Error"),
+          content: Text("Failed to add movie."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("OK"),
+            ),
+          ],
+        ),
+      );
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

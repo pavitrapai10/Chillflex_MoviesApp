@@ -1,5 +1,5 @@
 class Movie {
-  final int id; // Add this field
+  final int id; 
   final String title;
   final String genre;
   final String releaseDate;
@@ -16,7 +16,7 @@ class Movie {
     );
   }
 
-  // Convert Movie to JSON (needed for API update request)
+  // Converting Movie to JSON (needed for API update request)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
