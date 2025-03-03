@@ -5,7 +5,7 @@ import 'movie.dart';
 
 class ApiService {
   final String baseUrl = "https://192.168.1.10:7173/api";
-  final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   // Get the stored auth token
   Future<String?> getToken() async {
@@ -50,18 +50,19 @@ class ApiService {
         if (responseData.containsKey('token')) {
           await _secureStorage.write(key: 'auth_token', value: responseData['token']);
           return true;
-        } else {
-          throw Exception("Login failed: No token received.");
         }
-      } else {
+        throw Exception("Login failed: No token received.");
+      } else if (response.statusCode == 401) {
         throw Exception("Invalid credentials. Please try again.");
+      } else {
+        throw Exception("Login failed: Server responded with ${response.statusCode}");
       }
     } catch (e) {
       throw Exception("Error logging in: $e");
     }
   }
 
-  // Fetch Movies
+  // Fetch Movies (GET)
   Future<List<Movie>> fetchMovies() async {
     try {
       String? token = await getToken();

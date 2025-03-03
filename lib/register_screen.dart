@@ -33,7 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       String response = await apiService.registerUser(username, password);
 
-      if (response == "Registration successful") { // ✅ Check if registration was successful
+      if (response == "Registration successful") { 
 
         // Store username in SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();

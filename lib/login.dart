@@ -1,9 +1,10 @@
-// login.dart
 import 'package:api/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api.dart';
 import 'movie_listscreen.dart';
+import 'dart:io';
+
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -47,37 +48,55 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _login() async {
-    final ApiService apiService = ApiService(); 
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text;
+  final ApiService apiService = ApiService();
+  String username = _usernameController.text.trim();
+  String password = _passwordController.text;
 
-    _validateUsername(username);
-    _validatePassword(password);
+  _validateUsername(username);
+  _validatePassword(password);
 
-    if (_usernameError != null || _passwordError != null) return;
+  if (_usernameError != null || _passwordError != null) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      bool success = await apiService.loginUser(username,password);
-      if (success) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => MovieListScreen()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login failed"), backgroundColor: Colors.red),
-        );
-      }
-    } catch (e) {
+  try {
+    bool success = await apiService.loginUser(username, password);
+    
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}"), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text("Login Successful!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => MovieListScreen()),
       );
     }
+  } catch (e) {
+  
+  String errorMessage = e.toString().replaceAll("Exception: ", "").split(": ").last;
 
-    setState(() => _isLoading = false);
-  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+  );
+}
+
+
+  setState(() => _isLoading = false);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Circular Logo
                       CircleAvatar(
                         radius: 50,
-                        backgroundImage: AssetImage("assets/logo.png"), 
+                        backgroundImage: AssetImage("assets/logo.png"),
                         backgroundColor: Colors.transparent,
                       ),
                       const SizedBox(height: 20),
