@@ -13,28 +13,32 @@ class ApiService {
   }
 
   // Register User
-  Future<String> registerUser(String username, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/Auth/register"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
+ Future<void> registerUser(String username, String password) async {
+  try {
+    final response = await http.post(
+      Uri.parse("$baseUrl/Auth/register"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username, 'password': password}),
+    );
 
-      if (response.statusCode == 201) {
-        return "Registration successful!";
-      } else if (response.statusCode == 400) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        return responseData['message'] ?? "Username already exists";
-      } else if (response.statusCode == 500) {
-        return "Internal server error. Please try again later.";
-      } else {
-        return "Technical problem, try again later.";
-      }
-    } catch (e) {
-      return "Technical problem, try again later.";
+    // Debugging: Print response status and body
+    print("Register Response Status: ${response.statusCode}");
+    print("Register Response Body: ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return; // Registration successful
+    } else if (response.statusCode == 400) {
+      throw Exception("Username already exists");
+    } else if (response.statusCode == 500) {
+      throw Exception("Internal server error. Please try again later.");
+    } else {
+      throw Exception("Unexpected error occurred. Status Code: ${response.statusCode}");
     }
+  } catch (e) {
+    throw Exception("Error registering: $e");
   }
+}
+
 
   // Login and store token
   Future<bool> loginUser(String username, String password) async {

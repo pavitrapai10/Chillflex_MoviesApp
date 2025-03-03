@@ -15,57 +15,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _usernameError;
   String? _passwordError;
 
-  Future<void> _register() async {
-    final ApiService apiService = ApiService(); // ✅ Create an instance
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text;
 
-    // Validate username and password
-    setState(() {
-      _usernameError = username.isEmpty ? "Username is required" : null;
-      _passwordError = password.length < 8 ? "Password must be at least 8 characters" : null;
-    });
+Future<void> _register() async {
+  final ApiService apiService = ApiService();
+  String username = _usernameController.text.trim();
+  String password = _passwordController.text;
 
-    if (_usernameError != null || _passwordError != null) return;
- 
-    try {
-      
+  // Validate username and password
+  setState(() {
+    _usernameError = username.isEmpty ? "Username is required" : null;
+    _passwordError = password.length < 8 ? "Password must be at least 8 characters" : null;
+  });
 
-      String response = await apiService.registerUser(username, password);
+  if (_usernameError != null || _passwordError != null) return;
 
-      if (response == "Registration successful") { 
+  try {
+    await apiService.registerUser(username, password);
 
-        // Store username in SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('username', username);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Registration Successful"),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Registration Successful"), backgroundColor: Colors.green),
-          );
-
-          // Navigate to Login Screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        }
-      }
-    } catch (e) {
-      String errorMessage = e.toString();
-
-      if (errorMessage.contains("Username already exists")) {
-        setState(() {
-          _usernameError = "Username already exists";
-        });
-      
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      // Navigate to Login Screen after showing the snackbar
+      Future.delayed(const Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
         );
-      }
+      });
+    }
+  } catch (e) {
+    String errorMessage = e.toString();
+
+    if (errorMessage.contains("Username already exists")) {
+      setState(() {
+        _usernameError = "Username already exists";
+      });
+    } else if (errorMessage.contains("Internal server error")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Internal server error. Please try again later."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
