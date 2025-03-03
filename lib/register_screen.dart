@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'api.dart';  
+import 'api.dart';
 import 'login.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -15,57 +15,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _usernameError;
   String? _passwordError;
 
-Future<void> _register() async {
-  String username = _usernameController.text.trim();
-  String password = _passwordController.text;
+  Future<void> _register() async {
+    final ApiService apiService = ApiService(); // ✅ Create an instance
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text;
 
-  // Validate username and password
-  setState(() {
-    _usernameError = username.isEmpty ? "Username is required" : null;
-    _passwordError = password.length < 8 ? "Password must be at least 8 characters" : null;
-  });
+    // Validate username and password
+    setState(() {
+      _usernameError = username.isEmpty ? "Username is required" : null;
+      _passwordError = password.length < 8 ? "Password must be at least 8 characters" : null;
+    });
 
-  if (_usernameError != null || _passwordError != null) return;
+    if (_usernameError != null || _passwordError != null) return;
+ 
+    try {
+      
 
-  try {
-    bool isRegistered = await ApiService.registerUser(username, password);
+      String response = await apiService.registerUser(username, password);
 
-    if (isRegistered) {
-      // Store username in SharedPreferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('username', username);
+      if (response == "Registration successful") { // ✅ Check if registration was successful
 
-      if (mounted) {
+        // Store username in SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', username);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Registration Successful"), backgroundColor: Colors.green),
+          );
+
+          // Navigate to Login Screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+        }
+      }
+    } catch (e) {
+      String errorMessage = e.toString();
+
+      if (errorMessage.contains("Username already exists")) {
+        setState(() {
+          _usernameError = "Username already exists";
+        });
+      
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Registration Successful"), backgroundColor: Colors.green),
-        );
-
-        // Navigate to Login Screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
         );
       }
     }
-  } catch (e) {
-    String errorMessage = e.toString();
-
-    if (errorMessage.contains("Username already exists")) {
-      setState(() {
-        _usernameError = "Username already exists";
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
-      );
-    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 194, 0, 0),
+      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -78,6 +83,16 @@ Future<void> _register() async {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Circular Logo
+                    ClipOval(
+                      child: Image.asset(
+                        'assets/logo.png',
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const Text(
                       "Register",
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
@@ -118,7 +133,7 @@ Future<void> _register() async {
                       child: ElevatedButton(
                         onPressed: _register,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 207, 207, 196),
+                          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         child: const Text("Register", style: TextStyle(fontSize: 18)),

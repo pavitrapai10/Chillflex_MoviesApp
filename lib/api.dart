@@ -4,16 +4,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'movie.dart';
 
 class ApiService {
-  static const String baseUrl = "https://192.168.1.142:7173/api";
-  static final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  final String baseUrl = "https://192.168.1.10:7173/api";
+  final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   // Get the stored auth token
-  static Future<String?> getToken() async {
+  Future<String?> getToken() async {
     return await _secureStorage.read(key: 'auth_token');
   }
 
   // Register User
-  static Future<bool> registerUser(String username, String password) async {
+  Future<String> registerUser(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/Auth/register"),
@@ -21,18 +21,23 @@ class ApiService {
         body: jsonEncode({'username': username, 'password': password}),
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return true;
+      if (response.statusCode == 201) {
+        return "Registration successful!";
+      } else if (response.statusCode == 400) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        return responseData['message'] ?? "Username already exists";
+      } else if (response.statusCode == 500) {
+        return "Internal server error. Please try again later.";
       } else {
-        throw Exception("Registration failed: ${response.body}");
+        return "Technical problem, try again later.";
       }
     } catch (e) {
-      throw Exception("Error registering user: $e");
+      return "Technical problem, try again later.";
     }
   }
 
   // Login and store token
-  static Future<bool> loginUser(String username, String password) async {
+  Future<bool> loginUser(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/Auth/login"),
@@ -97,7 +102,7 @@ class ApiService {
         }),
       );
 
-      if (response.statusCode == 201 ) {
+      if (response.statusCode == 201) {
         return true;
       } else {
         throw Exception("Failed to add movie: ${response.body}");
@@ -107,72 +112,61 @@ class ApiService {
     }
   }
 
-  
+  // Update Movie (PUT)
   Future<void> updateMovie(Movie movie) async {
-  try {
-    String? token = await getToken(); 
+    try {
+      String? token = await getToken();
+      if (token == null) throw Exception("Unauthorized: Please login again.");
+      if (movie.id == null || movie.id == 0) throw Exception("Invalid movie ID: ${movie.id}");
 
-    if (movie.id == null || movie.id == 0) {
-      throw Exception("Invalid movie ID: ${movie.id}");
+      final Uri url = Uri.parse("$baseUrl/Movies/${movie.id}");
+
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "id": movie.id,
+          "title": movie.title,
+          "genre": movie.genre,
+          "releaseDate": movie.releaseDate,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print("Movie updated successfully!");
+      } else if (response.statusCode == 404) {
+        throw Exception("Failed to update movie: Movie not found (404). Check if ID ${movie.id} exists.");
+      } else {
+        throw Exception("Failed to update movie. Server responded with ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Error updating movie: $e");
     }
-
-    final Uri url = Uri.parse('https://192.168.1.142:7173/api/Movies/${movie.id}'); 
-
-    print("API Request - Updating Movie ID: ${movie.id}");
-    print("API Request - URL: $url");
-    print("API Request - Body: ${jsonEncode({
-      "id": movie.id,
-      "title": movie.title,
-      "genre": movie.genre,
-      "releaseDate": movie.releaseDate,
-    })}");
-
-    final response = await http.put(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        "id": movie.id,  // Include ID since PUT replaces the full entity
-        "title": movie.title,
-        "genre": movie.genre,
-        "releaseDate": movie.releaseDate,
-      }),
-    );
-
-    print("API Response - Status Code: ${response.statusCode}");
-    print("API Response - Body: ${response.body}");
-
-    if (response.statusCode == 200 || response.statusCode == 204) {
-      print("Movie updated successfully!");
-    } else if (response.statusCode == 404) {
-      throw Exception("Failed to update movie: Movie not found (404). Check if ID ${movie.id} exists.");
-    } else {
-      throw Exception("Failed to update movie. Server responded with ${response.statusCode}");
-    }
-  } catch (e) {
-    throw Exception("Failed to update movie: $e");
   }
-}
 
-
-  // DELETE - Delete a Movie
+  // Delete a Movie (DELETE)
   Future<bool> deleteMovie(int id) async {
-    final token = await getToken();
-    if (token == null) throw Exception("Unauthorized: Please login again.");
+    try {
+      final token = await getToken();
+      if (token == null) throw Exception("Unauthorized: Please login again.");
 
-    final response = await http.delete(
-      Uri.parse("$baseUrl/Movies/$id"),     
-      headers: {
-        "Authorization": "Bearer $token",
-      },
-    );
+      final response = await http.delete(
+        Uri.parse("$baseUrl/Movies/$id"),
+        headers: {
+          "Authorization": "Bearer $token",
+        },
+      );
 
-    if (response.statusCode == 200 || response.statusCode == 204) {
-      return true;
-    } else {
-      throw Exception("Failed to delete movie: ${response.body}");
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
+      } else {
+        throw Exception("Failed to delete movie: ${response.body}");
+      }
+    } catch (e) {
+      throw Exception("Error deleting movie: $e");
     }
   }
 }

@@ -48,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    final ApiService apiService = ApiService(); 
     String username = _usernameController.text.trim();
     String password = _passwordController.text;
 
@@ -59,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      bool success = await ApiService.loginUser(username, password);
+      bool success = await apiService.loginUser(username,password);
       if (success) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MovieListScreen()),
@@ -81,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 51, 51),
+      backgroundColor: const Color.fromARGB(255, 2, 2, 2),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -96,8 +97,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text("Login", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black)),
+                      // Circular Logo
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: AssetImage("assets/logo.png"), 
+                        backgroundColor: Colors.transparent,
+                      ),
                       const SizedBox(height: 20),
+
+                      const Text(
+                        "Login",
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Username Field
                       TextFormField(
                         controller: _usernameController,
                         decoration: InputDecoration(
@@ -109,6 +123,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         onChanged: _validateUsername,
                       ),
                       const SizedBox(height: 16),
+
+                      // Password Field
                       TextFormField(
                         controller: _passwordController,
                         obscureText: !_isPasswordVisible,
@@ -129,6 +145,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         onChanged: _validatePassword,
                       ),
                       const SizedBox(height: 24),
+
+                      // Login Button
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -143,15 +161,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               : const Text("Login", style: TextStyle(fontSize: 18)),
                         ),
                       ),
+
+                      // Register Navigation
                       TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => RegisterScreen()),
-                        );
-                      },
-                      child: const Text("Go back to Register"),
-                    ),
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => RegisterScreen()),
+                          );
+                        },
+                        child: const Text("Go back to Register"),
+                      ),
                     ],
                   ),
                 ),
